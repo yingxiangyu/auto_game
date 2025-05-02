@@ -56,7 +56,7 @@ def set_game_pos():
     click_pos = []
     for hwnd in hwnd_list:
         set_window_pos(hwnd, x, 0, width, height)
-        click_pos.append(Point(x + width // 2 + 60, height + 70))
+        click_pos.append(Point(x + width // 2 + 60, height + 130))
         x = x + width
     return click_pos
 

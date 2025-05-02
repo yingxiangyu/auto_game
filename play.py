@@ -39,6 +39,7 @@ actions = [
     [ACTION_MAPPING.play_game, 3],
     [ACTION_MAPPING.return_main, 1],
     [ACTION_MAPPING.skill_dianta, 1],
+    [ACTION_MAPPING.next_lvl, 1],
     # [ACTION_MAPPING.skill_jijia, 1],
 ]
 
