@@ -50,6 +50,11 @@ class ACTION_MAPPING:
     skill_ranyoudan = ActionImg('skill_ranyoudan', os.path.join(image_dir, 'skill', 'ranyoudan' + '.png'))
     skill_wenyadan = ActionImg('skill_wenyadan', os.path.join(image_dir, 'skill', 'wenyadan' + '.png'))
 
+    double_select_start = ActionImg('double_select_start', os.path.join(image_dir, 'double_select_start' + '.png'))
+    double_select_end = ActionImg('double_select_end', os.path.join(image_dir, 'double_select_end' + '.png'))
+    hexin_enter_game = ActionImg('hexin_enter_game', os.path.join(image_dir, 'hexin_enter_game' + '.png'))
+    hexin_start = ActionImg('hexin_start', os.path.join(image_dir, 'hexin_start' + '.png'))
+
 
 for ac in all_action:
     setattr(ACTION_MAPPING, ac, ActionImg(ac, os.path.join(image_dir, ac + '.png')))

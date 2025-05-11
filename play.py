@@ -20,38 +20,40 @@ class Flag:
     exit_flag = False
 
 
-def exit_program():
-    print("退出程序...")
-    Flag.exit_flag = True
-
 
 def stop_program():
     print("暂停程序...")
     Flag.run_flag = False
 
+keyboard.add_hotkey('ctrl+q', stop_program)
 
-def start_program():
-    print("开始程序...")
-    Flag.run_flag = True
+
 
 
 actions = [
     [ACTION_MAPPING.play_game, 3],
     [ACTION_MAPPING.return_main, 1],
     [ACTION_MAPPING.skill_dianta, 1],
-    [ACTION_MAPPING.next_lvl, 1],
+    # [ACTION_MAPPING.next_lvl, 1],
     # [ACTION_MAPPING.skill_jijia, 1],
 ]
 
 select_skill_orders = [
     ACTION_MAPPING.skill_gun,
+    # ACTION_MAPPING.skill_bingbao,
+    #
+    # ACTION_MAPPING.skill_ranyoudan,
+    #
+    # ACTION_MAPPING.skill_jiguang,
+    #
+    # ACTION_MAPPING.skill_ganbingdan,
+
+    # ACTION_MAPPING.skill_wenyadan,
     ACTION_MAPPING.skill_dianci,
+    ACTION_MAPPING.skill_car,
     ACTION_MAPPING.skill_wenyadan,
-    ACTION_MAPPING.skill_jiguang,
+    # ACTION_MAPPING.skill_dianji,
 ]
-keyboard.add_hotkey('ctrl+q', stop_program)
-keyboard.add_hotkey('ctrl+w', start_program)
-keyboard.add_hotkey('ctrl+e', exit_program)
 
 static_pos = utils.set_game_pos()
 while True:
