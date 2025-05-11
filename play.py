@@ -20,15 +20,12 @@ class Flag:
     exit_flag = False
 
 
-
 def stop_program():
     print("暂停程序...")
     Flag.run_flag = False
 
+
 keyboard.add_hotkey('ctrl+q', stop_program)
-
-
-
 
 actions = [
     [ACTION_MAPPING.play_game, 3],

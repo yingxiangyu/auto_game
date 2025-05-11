@@ -5,24 +5,20 @@ Date: 2025/4/2 15:47
 Description: 
 """
 import base64
-import logging
 import time
-from ctypes import windll
 from dataclasses import dataclass
 from io import BytesIO
-
-import pyautogui
-import pydirectinput  # 需安装：pip install pydirectinput
-import requests
-
-import win32gui
-import win32con
 
 import cv2
 import numpy as np
 import pyautogui
-import win32ui
-from PIL import Image, ImageGrab
+import pydirectinput  # 需安装：pip install pydirectinput
+import requests
+import win32con
+import win32gui
+
+from skill_enum import detect_action
+from skill_enum import Action
 
 
 def set_window_pos(hwnd, x, y, width, height):
@@ -132,6 +128,7 @@ class Game:
         self.hwnd = hwnd
         self.screen_left = None
         self.screen_top = None
+        self.static_pos = self.find_static_pos()
 
     def get_window_img(self):
         client_left, client_top, client_right, client_bottom = win32gui.GetClientRect(self.hwnd)
@@ -164,6 +161,14 @@ class Game:
         client_x = point.x - self.screen_left
         client_y = point.y - self.screen_top
         return Point(client_x, client_y)
+
+    def find_static_pos(self):
+        screen = self.get_window_img()
+        tt = ocr(screen)
+        for o in tt:
+            action = detect_action(o.text)
+            if action == Action.fight:
+                return self.client_to_screen(o.point)
 
 
 def new_set_game_pos():

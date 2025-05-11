@@ -45,7 +45,7 @@ def match_skills(ocr_skills, game):
                 utils.click(pos)
                 return
     else:
-        skill,pos = ocr_skills[0]
+        skill, pos = ocr_skills[0]
         logging.info(f"find {skill}  {pos}")
         utils.click(pos)
 
@@ -60,21 +60,22 @@ def play(game):
         ocr_skills = []
         for o in ocr:
             action = detect_action(o.text)
-            if action and action in [
-                Action.fight,
-                Action.goback,
-                Action.play_game
-            ]:
+            if action:
                 logging.info(f"find {action.name} {o.point}")
-                pos = game.client_to_screen(o.point)
-                utils.click(pos)
-                break
+                if action in [
+                    Action.goback,
+                    Action.play_game
+                ]:
+                    pos = game.client_to_screen(o.point)
+                    utils.click(pos)
+                    break
             skill = detect_skills(o.text)
             if skill:
+                logging.info(f"find {skill.value}  {o.point}")
                 ocr_skills.append([skill, game.client_to_screen(o.point)])
-        print(ocr_skills)
         if ocr_skills:
             match_skills(ocr_skills, game)
+        utils.click(game.static_pos)
 
 
 if __name__ == '__main__':
