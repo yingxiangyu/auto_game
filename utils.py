@@ -8,6 +8,7 @@ import base64
 import time
 from dataclasses import dataclass
 from io import BytesIO
+from threading import Lock
 
 import cv2
 import numpy as np
@@ -16,9 +17,13 @@ import pydirectinput  # 需安装：pip install pydirectinput
 import requests
 import win32con
 import win32gui
+from openai.types.beta.thread_create_and_run_params import Thread
 
 from skill_enum import detect_action
 from skill_enum import Action
+# 全局窗口大小设置
+WINDOW_WIDTH = 600
+WINDOW_HEIGHT = 1200
 
 
 def set_window_pos(hwnd, x, y, width, height):
@@ -73,10 +78,14 @@ class Point:
     y: int
 
 
+lock = Lock()
+
+
 def click(p: Point):
-    move_to(p)
-    pydirectinput.click()
-    time.sleep(0.1)
+    with lock:
+        move_to(p)
+        pydirectinput.click()
+        time.sleep(0.1)
 
 
 def double_click(p: Point):
@@ -128,22 +137,18 @@ class Game:
         self.hwnd = hwnd
         self.screen_left = None
         self.screen_top = None
-        self.static_pos = self.find_static_pos()
+        self.screen_right = None
+        self.screen_bottom = None
+        self.static_pos = None
+        self.jijia_point = None
+        self.jiguang_point = None
 
     def get_window_img(self):
-        client_left, client_top, client_right, client_bottom = win32gui.GetClientRect(self.hwnd)
-
-        # 获取客户区左上角在屏幕中的位置
-        (screen_left, screen_top) = win32gui.ClientToScreen(self.hwnd, (client_left, client_top))
-
-        width = client_right - client_left
-        height = client_bottom - client_top
-
+        width = self.screen_right - self.screen_left
+        height = self.screen_bottom - self.screen_top
         # 使用pyautogui截图
-        screen = pyautogui.screenshot(region=(screen_left, screen_top, width, height))
+        screen = pyautogui.screenshot(region=(self.screen_left, self.screen_top, width, height))
         screen.save('window_screenshot.png')
-        self.screen_left = screen_left
-        self.screen_top = screen_top
         return screen
 
     def client_to_screen(self, point):
@@ -170,19 +175,34 @@ class Game:
             if action == Action.fight:
                 return self.client_to_screen(o.point)
 
+    def init_points(self):
+        client_left, client_top, client_right, client_bottom = win32gui.GetClientRect(self.hwnd)
 
+        # 获取客户区左上角在屏幕中的位置
+        (screen_left, screen_top) = win32gui.ClientToScreen(self.hwnd, (client_left, client_top))
+        (client_right, client_bottom) = win32gui.ClientToScreen(self.hwnd, (client_right, client_bottom))
+        self.screen_left = screen_left
+        self.screen_top = screen_top
+        self.screen_right = client_right
+        self.screen_bottom = client_bottom
+
+        # self.static_pos = self.client_to_screen(Point(300, 1150))
+        # self.jijia_point = self.client_to_screen(Point(530, 850))
+        # self.jiguang_point = self.client_to_screen(Point(530, 950))
+
+        self.static_pos = self.client_to_screen(Point(int(WINDOW_WIDTH * 0.5), int(WINDOW_HEIGHT * 0.95)))
+        self.jijia_point = self.client_to_screen(Point(int(WINDOW_WIDTH * 0.88), int(WINDOW_HEIGHT * 0.71)))
+        self.jiguang_point = self.client_to_screen(Point(int(WINDOW_WIDTH * 0.88), int(WINDOW_HEIGHT * 0.79)))
 def new_set_game_pos():
     hwnd_list = find_window('向僵尸开炮')
-    width = 500
-    height = 1000
-    x = 1900
+    hwnd_list = sorted(hwnd_list)
+    x = 1300
     games = []
     for hwnd in hwnd_list:
-        set_window_pos(hwnd, x, 0, width, height)
+        set_window_pos(hwnd, x, 0, WINDOW_WIDTH, WINDOW_HEIGHT)
         games.append(Game(hwnd))
-        x = x + width
+        x += WINDOW_WIDTH  # 递增 X 坐标    return games
     return games
-
 
 @dataclass
 class OcrRet:
@@ -194,25 +214,28 @@ def ocr(image):
     image_bytes = BytesIO()
     image.save(image_bytes, format=image.format or 'PNG')  # 可根据需要选择格式，例如 'JPEG'
     encoded_string = base64.b64encode(image_bytes.getvalue()).decode("utf-8")
-
-    uri = 'http://192.168.1.112:1224/api/ocr'
-    data = {
-        "base64": encoded_string,
-        "options": {
-            "ocr.language": "models/config_chinese.txt",
-            "ocr.cls": True,
-            "data.format": "string"
+    for _ in range(3):
+        uri = 'http://192.168.1.112:1224/api/ocr'
+        data = {
+            "base64": encoded_string,
+            "options": {
+                "ocr.language": "models/config_chinese.txt",
+                "ocr.cls": True,
+                "data.format": "string"
+            }
         }
-    }
-    rets = []
-    for i in requests.post(uri, json=data).json()['data']:
-        box = i['box']
-        text = i['text']
-        top_x = box[0][0]
-        top_y = box[0][1]
-        width = box[1][0] - box[0][0]
-        high = box[2][1] - box[0][1]
-        point_x = top_x + width // 2
-        point_y = top_y + high // 2
-        rets.append(OcrRet(text, Point(point_x, point_y)))
-    return rets
+        rets = []
+        try:
+            for i in requests.post(uri, json=data).json()['data']:
+                box = i['box']
+                text = i['text']
+                top_x = box[0][0]
+                top_y = box[0][1]
+                width = box[1][0] - box[0][0]
+                high = box[2][1] - box[0][1]
+                point_x = top_x + width // 2
+                point_y = top_y + high // 2
+                rets.append(OcrRet(text, Point(point_x, point_y)))
+            return rets
+        except:
+            time.sleep(0.5)

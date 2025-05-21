@@ -24,6 +24,7 @@ class Skill(Enum):
     duo_wei_dan_zhu = '多维弹珠'
     shi_kong_lie_xi = '时空裂隙'
     gun = '枪'
+    better = '优先技能'
 
 
 class Action(Enum):
@@ -32,10 +33,19 @@ class Action(Enum):
     chose_skills = '选择技能'
     refresh = '刷新'
     goback = '返回'
+    challenge = '挑战'
+    confirm = '确定'
 
 
 def detect_skills(text: str) -> Optional[Skill]:
     skill_keywords = [
+        ((
+             '急冻子弹', '弹道数量', '分裂冰片',
+             '子弹伤害', '学习装甲车', '子弹爆炸',
+             '学习冰暴发生器', '学习温压弹', '冰暴扩张','连环冰暴',
+             '出击次数', '射击连发数', '分裂子弹',
+             '分裂子弹四射', '爆炸扩散', '焦土',
+         ), Skill.better),
         (('温压弹',), Skill.wen_ya_dan),
         (('冰弹',), Skill.gan_bing_dan),
         (('电磁',), Skill.dian_ci_chuan_ci),
@@ -52,7 +62,8 @@ def detect_skills(text: str) -> Optional[Skill]:
         (('电极',), Skill.dian_ji_zhu),
         (('弹珠',), Skill.duo_wei_dan_zhu),
         (('时空裂隙',), Skill.shi_kong_lie_xi),
-        (('子弹', '射速', '连发数'), Skill.gun)
+        (('子弹', '射速', '连发数'), Skill.gun),
+
     ]
 
     for keywords, skill in skill_keywords:
@@ -64,11 +75,12 @@ def detect_skills(text: str) -> Optional[Skill]:
 
 def detect_action(text: str) -> Optional[Action]:
     for name, ac in Action.__dict__['_member_map_'].items():
-        if ac.value == text:
+        if ac.value in text:
             return ac
     return None
 
+
 if __name__ == '__main__':
-    print(detect_skills('新'))
+    print(detect_skills('连续出击'))
     print(detect_action('开始游戏'))
-    print(detect_action('战斗'))
+    print(detect_action('1/2确定'))
