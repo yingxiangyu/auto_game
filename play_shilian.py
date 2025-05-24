@@ -40,7 +40,7 @@ skill_order = [
     Skill.ran_you_dan,
     Skill.wen_ya_dan,
     #
-    # Skill.bing_bao_fa_sheng_qi,
+    Skill.bing_bao_fa_sheng_qi,
     # Skill.gan_bing_dan,
     # Skill.zhi_dao_ji_guang,
 
@@ -99,7 +99,7 @@ def play(game):
     game.init_points()
     skill_count = 0
     while True:
-        time.sleep(1)
+        time.sleep(3)
         if not Flag.run_flag:
             continue
         screen = game.get_window_img()
