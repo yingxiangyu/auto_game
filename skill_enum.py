@@ -24,7 +24,8 @@ class Skill(Enum):
     duo_wei_dan_zhu = '多维弹珠'
     shi_kong_lie_xi = '时空裂隙'
     gun = '枪'
-    better = '优先技能'
+    better1 = '优先技能1'
+    better2 = '优先技能2'
 
 
 class Action(Enum):
@@ -37,35 +38,41 @@ class Action(Enum):
     confirm = '确定'
 
 
+skill_keywords = [
+    ((
+         '急冻子', '分裂冰片',  # 冰子弹 冰子弹四分裂
+         '齐射', '连发', '射击连发数', '弹道数量',  # 弹道数 连发数
+         '分裂子弹', '个次级子弹',  # 子弹二分裂 四分裂
+         '出击次数', '焦土策略', '焦油点火',  # 车 车百分比
+     ), Skill.better1),
+    ((
+         '子弹爆炸', '爆炸扩散',  # 子弹爆炸
+         '学习冰暴发生器', '冰暴扩张', '连环冰暴',  # 冰暴
+     ), Skill.better2),
+    (('温压弹',), Skill.wen_ya_dan),
+    (('冰弹',), Skill.gan_bing_dan),
+    (('电磁',), Skill.dian_ci_chuan_ci),
+    (('装甲车', '坦克'), Skill.zhuang_jia_che),
+    (('高能射线',), Skill.gao_neng_she_xian),
+    (('制导激光',), Skill.zhi_dao_ji_guang),
+    (('冰暴',), Skill.bing_bao_fa_sheng_qi),
+    (('跃迁', '电离爆炸'), Skill.yue_qian_dian_zi),
+    (('旋风加农', '龙卷风'), Skill.xuan_feng),
+    (('轰炸',), Skill.kong_tou_hong_zha),
+    (('气刃',), Skill.ya_suo_qi_ren),
+    (('燃油弹', '灼烧', '点燃', '快速装填'), Skill.ran_you_dan),
+    (('无人机',), Skill.wu_ren_ji),
+    (('电极',), Skill.dian_ji_zhu),
+    (('弹珠',), Skill.duo_wei_dan_zhu),
+    (('时空裂隙',), Skill.shi_kong_lie_xi),
+    (('子弹', '射速', '连发数'), Skill.gun),
+
+]
+
+
 def detect_skills(text: str) -> Optional[Skill]:
-    skill_keywords = [
-        ((
-             '急冻子弹', '弹道数量', '分裂冰片',
-             '子弹伤害', '学习装甲车', '子弹爆炸',
-             '学习冰暴发生器', '学习温压弹', '冰暴扩张','连环冰暴',
-             '出击次数', '射击连发数', '分裂子弹',
-             '分裂子弹四射', '爆炸扩散', '焦土',
-         ), Skill.better),
-        (('温压弹',), Skill.wen_ya_dan),
-        (('冰弹',), Skill.gan_bing_dan),
-        (('电磁',), Skill.dian_ci_chuan_ci),
-        (('装甲车', '坦克'), Skill.zhuang_jia_che),
-        (('高能射线',), Skill.gao_neng_she_xian),
-        (('制导激光',), Skill.zhi_dao_ji_guang),
-        (('冰暴',), Skill.bing_bao_fa_sheng_qi),
-        (('跃迁', '电离爆炸'), Skill.yue_qian_dian_zi),
-        (('旋风加农', '龙卷风'), Skill.xuan_feng),
-        (('轰炸',), Skill.kong_tou_hong_zha),
-        (('气刃',), Skill.ya_suo_qi_ren),
-        (('燃油弹', '灼烧', '点燃', '快速装填'), Skill.ran_you_dan),
-        (('无人机',), Skill.wu_ren_ji),
-        (('电极',), Skill.dian_ji_zhu),
-        (('弹珠',), Skill.duo_wei_dan_zhu),
-        (('时空裂隙',), Skill.shi_kong_lie_xi),
-        (('子弹', '射速', '连发数'), Skill.gun),
-
-    ]
-
+    if '火焰子' in text or '电磁子' in text:
+        return None
     for keywords, skill in skill_keywords:
         for keyword in keywords:
             if keyword in text:
@@ -75,6 +82,8 @@ def detect_skills(text: str) -> Optional[Skill]:
 
 def detect_action(text: str) -> Optional[Action]:
     for name, ac in Action.__dict__['_member_map_'].items():
+        if '挑战失败' in text:
+            continue
         if ac.value in text:
             return ac
     return None

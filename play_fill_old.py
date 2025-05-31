@@ -33,8 +33,7 @@ keyboard.add_hotkey('ctrl+q', stop_program)
 keyboard.add_hotkey('ctrl+e', start_program)
 
 skill_order = [
-    Skill.better1,
-    Skill.better2,
+    Skill.better,
 
     Skill.gun,
 
@@ -57,13 +56,11 @@ def match_skills(ocr_skills, game):
             if skill == ock_sk:
                 logging.info(f"find {skill.value}  {pos}")
                 utils.click(pos)
-                if skill == Skill.better1:
-                    return True
+                return
     else:
         skill, pos = ocr_skills[0]
         logging.info(f"find {skill}  {pos}")
         utils.click(pos)
-    return False
 
 
 def combin_skills(ocr_skills):
@@ -90,12 +87,9 @@ def combin_skills(ocr_skills):
     ret = []
     for group in groups:
         # 优先选择 Skill.better
-        better_skill1 = next((item for item in group if item[0] == Skill.better1), None)
-        better_skill2 = next((item for item in group if item[0] == Skill.better2), None)
-        if better_skill1:
-            ret.append(better_skill1)
-        elif better_skill2:
-            ret.append(better_skill2)
+        better_skill = next((item for item in group if item[0] == Skill.better), None)
+        if better_skill:
+            ret.append(better_skill)
         else:
             # 否则选择第一个
             ret.append(group[0])
@@ -103,27 +97,46 @@ def combin_skills(ocr_skills):
     return ret
 
 
+def check_main_page(ocr):
+    flag1 = False
+    flag2 = True
+    for o in ocr:
+        if '开始游戏' in o.text:
+            flag1 = True
+        if '核心试炼' in o.text:
+            flag2 = False
+    return flag1 and flag2
+
+
+def check_perfect_stage(ocr, game):
+    for o in ocr:
+        if '剩余血量' in o.text:
+            return False
+    utils.click(game.next_stage)
+    return True
+
+
 def play(game):
     print('start')
     game.init_points()
     skill_count = 0
-    better_skill_count = 0
-    double_select = False
     while True:
         time.sleep(3)
         if not Flag.run_flag:
             continue
         screen = game.get_window_img()
         ocr = image_ocr(np.array(screen))
+        if check_main_page(ocr) and check_perfect_stage(ocr, game):
+            continue
         ocr_skills = []
         confirm_pos = None
+
         for o in ocr:
             action = detect_action(o.text)
             if action:
                 if action == Action.confirm:
                     logging.info(f"find {action.value} {o.point}")
                     confirm_pos = game.client_to_screen(o.point)
-                    double_select = True
                     continue
                 if action in [
                     Action.goback,
@@ -134,8 +147,6 @@ def play(game):
                     pos = game.client_to_screen(o.point)
                     utils.click(pos)
                     skill_count = 0
-                    better_skill_count = 0
-                    double_select = False
             skill = detect_skills(o.text)
             if skill:
                 ocr_skills.append([skill, game.client_to_screen(o.point)])
@@ -144,13 +155,7 @@ def play(game):
             if confirm_pos:
                 click_his = []
                 for ock_sk, pos in ocr_skills:
-                    if ock_sk == Skill.better1:
-                        click_his.append(pos)
-                        logging.info(f"find {ock_sk.value}  {pos}")
-                        utils.click(pos)
-                        better_skill_count += 1
-                for ock_sk, pos in ocr_skills:
-                    if ock_sk == Skill.better2:
+                    if ock_sk == Skill.better:
                         click_his.append(pos)
                         logging.info(f"find {ock_sk.value}  {pos}")
                         utils.click(pos)
@@ -171,18 +176,13 @@ def play(game):
                         utils.click(pos)
                 utils.click(confirm_pos)
             else:
-                if match_skills(ocr_skills, game):
-                    better_skill_count += 1
+                match_skills(ocr_skills, game)
                 skill_count += 1
-                # if double_select and better_skill_count < 5:
-                #     utils.click(game.exit_point)
-        utils.click(game.static_pos)
+        # utils.click(game.static_pos)
         if skill_count > 0 and skill_count % 2 == 0:
             utils.click(game.jiguang_point)
         if skill_count == 3:
             utils.click(game.jijia_point)
-        # if skill_count == 7 and better_skill_count < 5:
-        #     utils.click(game.exit_point)
 
 
 if __name__ == '__main__':

@@ -4,23 +4,15 @@ Author: yuyingxiang@baidu.com
 Date: 2025/4/2 15:47 
 Description: 
 """
-import base64
 import time
 from dataclasses import dataclass
-from io import BytesIO
 from threading import Lock
 
-import cv2
-import numpy as np
 import pyautogui
 import pydirectinput  # 需安装：pip install pydirectinput
-import requests
 import win32con
 import win32gui
-from openai.types.beta.thread_create_and_run_params import Thread
 
-from skill_enum import detect_action
-from skill_enum import Action
 # 全局窗口大小设置
 WINDOW_WIDTH = 600
 WINDOW_HEIGHT = 1200
@@ -59,19 +51,6 @@ def find_window(key_word):
     return hwnd_list
 
 
-def set_game_pos():
-    hwnd_list = find_window('向僵尸开炮')
-    width = 500
-    height = 1000
-    x = 1900
-    click_pos = []
-    for hwnd in hwnd_list:
-        set_window_pos(hwnd, x, 0, width, height)
-        click_pos.append(Point(x + width // 2 + 60, height + 130))
-        x = x + width
-    return click_pos
-
-
 @dataclass
 class Point:
     x: int
@@ -96,41 +75,6 @@ def move_to(p: Point):
     pydirectinput.moveTo(p.x, p.y)
 
 
-def find_image(image_path, count=1) -> Point | None:
-    try:
-        for _ in range(count):
-            tt = pyautogui.locateOnScreen(image_path, confidence=0.8)
-            if tt is not None:
-                return Point(int(tt.left + tt.width // 2), int(tt.top + tt.height // 2))
-            time.sleep(0.2)
-    except Exception as e:
-        pass
-
-
-def find_resized_template(template_path, scale_factor=1.0):
-    template = cv2.imread(template_path, cv2.IMREAD_COLOR)
-    template = cv2.resize(template, None, fx=scale_factor, fy=scale_factor)
-    screenshot = pyautogui.screenshot()
-    screenshot = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
-
-    result = cv2.matchTemplate(screenshot, template, cv2.TM_CCOEFF_NORMED)
-    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
-
-    if max_val >= 0.8:  # 置信度阈值
-        return max_loc[0], max_loc[1], template.shape[1], template.shape[0]
-    return None
-
-
-def find_image_resized(image_path):
-    # 示例：假设原图需要放大 1.5 倍
-    start = 0.6
-    while start <= 1:
-        result = find_resized_template(image_path, scale_factor=start)
-        if result is not None:
-            return Point(int(result[0] + result[2] // 2), int(result[1] + result[3] // 2))
-        start += 0.1
-
-
 class Game:
 
     def __init__(self, hwnd):
@@ -142,6 +86,8 @@ class Game:
         self.static_pos = None
         self.jijia_point = None
         self.jiguang_point = None
+        self.next_stage = None
+        self.exit_point = None
 
     def get_window_img(self):
         width = self.screen_right - self.screen_left
@@ -167,14 +113,6 @@ class Game:
         client_y = point.y - self.screen_top
         return Point(client_x, client_y)
 
-    def find_static_pos(self):
-        screen = self.get_window_img()
-        tt = ocr(screen)
-        for o in tt:
-            action = detect_action(o.text)
-            if action == Action.fight:
-                return self.client_to_screen(o.point)
-
     def init_points(self):
         client_left, client_top, client_right, client_bottom = win32gui.GetClientRect(self.hwnd)
 
@@ -193,7 +131,11 @@ class Game:
         self.static_pos = self.client_to_screen(Point(int(WINDOW_WIDTH * 0.5), int(WINDOW_HEIGHT * 0.95)))
         self.jijia_point = self.client_to_screen(Point(int(WINDOW_WIDTH * 0.88), int(WINDOW_HEIGHT * 0.71)))
         self.jiguang_point = self.client_to_screen(Point(int(WINDOW_WIDTH * 0.88), int(WINDOW_HEIGHT * 0.79)))
-def new_set_game_pos():
+        self.next_stage = self.client_to_screen(Point(int(WINDOW_WIDTH * 0.79), int(WINDOW_HEIGHT * 0.45)))
+        self.exit_point = self.client_to_screen(Point(int(WINDOW_WIDTH * 0.08), int(WINDOW_HEIGHT * 0.08)))
+
+
+def set_game_pos():
     hwnd_list = find_window('向僵尸开炮')
     hwnd_list = sorted(hwnd_list)
     x = 1300
@@ -203,39 +145,3 @@ def new_set_game_pos():
         games.append(Game(hwnd))
         x += WINDOW_WIDTH  # 递增 X 坐标    return games
     return games
-
-@dataclass
-class OcrRet:
-    text: str
-    point: Point
-
-
-def ocr(image):
-    image_bytes = BytesIO()
-    image.save(image_bytes, format=image.format or 'PNG')  # 可根据需要选择格式，例如 'JPEG'
-    encoded_string = base64.b64encode(image_bytes.getvalue()).decode("utf-8")
-    for _ in range(3):
-        uri = 'http://192.168.1.112:1224/api/ocr'
-        data = {
-            "base64": encoded_string,
-            "options": {
-                "ocr.language": "models/config_chinese.txt",
-                "ocr.cls": True,
-                "data.format": "string"
-            }
-        }
-        rets = []
-        try:
-            for i in requests.post(uri, json=data).json()['data']:
-                box = i['box']
-                text = i['text']
-                top_x = box[0][0]
-                top_y = box[0][1]
-                width = box[1][0] - box[0][0]
-                high = box[2][1] - box[0][1]
-                point_x = top_x + width // 2
-                point_y = top_y + high // 2
-                rets.append(OcrRet(text, Point(point_x, point_y)))
-            return rets
-        except:
-            time.sleep(0.5)
